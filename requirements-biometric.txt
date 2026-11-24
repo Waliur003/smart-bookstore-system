@@ -1,0 +1,5 @@
+# Optional: requires native dependencies and a working ffmpeg executable for voice capture.
+face-recognition>=1.3
+resemblyzer>=0.1.4
+numpy>=1.24
+soundfile>=0.12

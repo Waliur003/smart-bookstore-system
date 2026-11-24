@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block title %}Cart{% endblock %}{% block content %}<h1>Your Cart</h1>
+{% for line in lines %}<div class="line"><div><strong>{{ line.book.title }}</strong><p>{{ line.quantity }} × {{ line.book.price_cents|money }} = {{ line.line_total|money }}</p></div>
+<form method="post" action="{{ url_for('remove_cart',book_id=line.book.id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="secondary">Remove</button></form></div>{% else %}<p>Your cart is empty.</p>{% endfor %}
+{% if lines %}<div class="panel"><p>Subtotal: {{ subtotal|money }}</p>{% if current_user and current_user.role=='VC' %}<p>VIP discount: 10%</p>{% endif %}
+<h2>Order total: {{ total|money }}</h2><p class="muted">Overspending completes the order, adds a $1 fine, and suspends the account when the balance becomes negative.</p>
+{% if current_user and current_user.role in ['RC','VC'] and current_user.status=='active' %}<form method="post" action="{{ url_for('checkout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button>Confirm simulated purchase</button></form>
+{% else %}<p>Sign in with an active customer account to purchase.</p><a class="btn" href="{{ url_for('login') }}">Go to login</a>{% endif %}</div>{% endif %}
+{% endblock %}

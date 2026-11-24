@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block title %}AI Assistant{% endblock %}{% block content %}<h1>Local AI Assistant</h1>
+<p>Answers come from authorized store records when available. Otherwise the model identifies its answer as general knowledge.</p>
+<form class="stack" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><label>Your question<textarea name="question" rows="4" maxlength="1000" required>{{ question }}</textarea></label><button>Ask assistant</button></form>
+{% if response %}<article class="panel"><h2>Answer</h2><p class="preserve">{{ response.text }}</p><p class="muted">Source: {{ response.source }}</p></article>{% endif %}
+{% endblock %}

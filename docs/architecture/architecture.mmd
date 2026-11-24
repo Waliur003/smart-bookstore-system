@@ -1,0 +1,16 @@
+flowchart TD
+    U[Visitors and Customers] --> GUI[Browser GUI]
+    GUI --> F[Flask Controller]
+    F --> C[Catalog / Recommendation Service]
+    F --> A[Authentication and Biometric Adapter]
+    F --> P[Checkout / VIP Policy]
+    F --> R[Reviews / Moderation]
+    F --> S[Admin / Audit]
+    F --> AI[Assistant RAG]
+    C --> J[(Atomic JSON Repository)]
+    A --> J
+    P --> J
+    R --> J
+    S --> J
+    AI --> J
+    AI --> O[Ollama Local LLM]

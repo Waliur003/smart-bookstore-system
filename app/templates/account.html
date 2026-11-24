@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block title %}Account{% endblock %}{% block content %}<h1>My Account</h1>
+<div class="panel"><p><strong>{{ current_user.name }}</strong> · {{ current_user.role }} · {{ current_user.status }}</p>
+<h2>Balance: {{ current_user.balance_cents|money }}</h2><p>Moderation offenses: {{ current_user.offense_count }}</p></div>
+<h2>Purchase history</h2>{% for o in orders|reverse %}<article class="line"><div><strong>Order {{ o.id }}</strong><p>{{ o.created_at[:10] }} · {{ o.lines|length }} item line(s)</p>
+{% if o.promoted_to_vip %}<p>🎉 Promoted to VIP on this purchase</p>{% endif %}</div><div>Total: {{ o.total_cents|money }}{% if o.fine_cents %}<p>Fine: {{ o.fine_cents|money }}</p>{% endif %}</div></article>
+{% else %}<p>No orders yet.</p>{% endfor %}{% endblock %}

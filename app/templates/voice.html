@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}Voice Accessibility{% endblock %}{% block content %}<h1>Voice Accessibility (Proposed)</h1>
+<p>Browser speech recognition can help navigate the catalog. Support varies by browser and may use a vendor's speech service; it is not guaranteed to operate offline. Purchase by voice is not enabled in this prototype.</p>
+<button type="button" id="voice-start">Start voice search</button><p id="voice-status" role="status">Speech input is optional. You can always search using the catalog form.</p>
+<p><a href="{{ url_for('index') }}">Return to text search</a></p>{% endblock %}

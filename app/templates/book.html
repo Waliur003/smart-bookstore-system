@@ -1,0 +1,13 @@
+{% extends 'base.html' %}{% block title %}{{ book.title }}{% endblock %}{% block content %}
+<a href="{{ url_for('index') }}">← Back to catalog</a><div class="split"><section><div class="cover large">{{ book.genre }}</div></section><section>
+<h1>{{ book.title }}</h1><p class="muted">By {{ book.author }} · {{ book.genre }}</p><p>{{ book.description }}</p>
+<h2>{{ book.price_cents|money }}</h2><p>Available stock: {{ book.stock }} · Rating: {{ book.rating }} · Flag: {{ book.order_flag }}</p>
+{% if book.stock>0 and book.order_flag!='no-order' %}<form method="post" action="{{ url_for('add_cart',book_id=book.id) }}">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}"><label>Quantity<input type="number" name="quantity" min="1" max="50" value="1"></label><button>Add to cart</button></form>{% else %}<p class="alert error">This book cannot currently be ordered.</p>{% endif %}
+</section></div><hr><h2>Customer Reviews</h2>
+{% for r in reviews %}<article class="review"><strong>{% if r.stars %}{{ r.stars }}/5 stars{% else %}Comment{% endif %}</strong><p>{{ r.comment }}</p><small>{{ r.created_at[:10] }}</small></article>{% else %}<p>No reviews yet.</p>{% endfor %}
+{% if current_user and current_user.role in ['RC','VC'] and current_user.status=='active' %}<h3>Write a review</h3>
+<form class="stack" method="post" action="{{ url_for('review',book_id=book.id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<label>Rating<select name="stars"><option value="">No rating</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }} stars</option>{% endfor %}</select></label>
+<label>Comment<textarea name="comment" maxlength="1500" rows="4"></textarea></label><button>Submit review</button></form>{% endif %}
+{% endblock %}
