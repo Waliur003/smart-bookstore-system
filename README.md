@@ -223,8 +223,7 @@ pytest
 
 ## 10. Documentation
 
-- `docs/SRS/` — Software Requirements Specification.
-- `docs/design/` — Phase II Design Report.
+- [`docs/reports/`](docs/reports/) — Phase I Software Requirements Specification and Phase II Design Report.
 - `docs/architecture/` — Architecture and design diagrams.
 
 These documents define the expected behavior and proposed system design.
