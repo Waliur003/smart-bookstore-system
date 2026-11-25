@@ -237,11 +237,13 @@ These documents define the expected behavior and proposed system design.
 
 **Team Y**
 
-- Sufyaan Mohammed
-- Muhaymen Dali
-- Syed Karim
-- Sazedur Khan
-- Waliur Rahman Sun
+| Name | Role |
+|---|---|
+| Sufyaan Mohammed | |
+| Muhaymen Dali | |
+| Syed Karim | |
+| Sazedur Khan | |
+| Waliur Rahman Sun | |
 
 ## 12. Project Status
 
