@@ -1,12 +1,45 @@
-{% extends 'base.html' %}{% block title %}Catalog{% endblock %}{% block content %}
-<section class="hero"><h1>Discover your next great read.</h1><p>Explore books, check availability, and get personalized recommendations.</p></section>
-<form class="search" method="get" action="{{ url_for('index') }}"><label>Search books<input name="q" value="{{ q }}" placeholder="Title, author, or keyword"></label>
-<label>Category<select name="genre"><option value="">All categories</option>{% for g in genres %}<option value="{{ g }}" {% if g==genre %}selected{% endif %}>{{ g }}</option>{% endfor %}</select></label>
-<button>Search</button></form>
-<h2>Book Catalog <small>({{ books|length }} found)</small></h2><div class="books">
-{% for b in books %}<article class="card"><div class="cover">{{ b.genre }}</div><div class="pad"><h3><a href="{{ url_for('book_details',book_id=b.id) }}">{{ b.title }}</a></h3>
-<p class="muted">{{ b.author }}</p><p>{{ b.description }}</p><p><strong>{{ b.price_cents|money }}</strong> · Stock: {{ b.stock }}</p><p>⭐ {{ b.rating }} · {{ b.order_flag }}</p>
-<a class="btn" href="{{ url_for('book_details',book_id=b.id) }}">View details</a></div></article>
-{% else %}<p>No matching books. Try another search.</p>{% endfor %}</div>
-<h2>Recommended for you</h2><div class="recommend">{% for b in suggested %}<a href="{{ url_for('book_details',book_id=b.id) }}">{{ b.title }}</a>{% endfor %}</div>
+{% extends 'base.html' %}{% import '_macros.html' as ui with context %}
+{% block title %}{% if q %}Results for {{ q }}{% elif genre %}{{ genre }}{% else %}Books{% endif %}{% endblock %}
+{% block content %}
+{% set searching = q or genre %}
+{% if not searching and books %}
+<h1 class="sr">Smart Bookstore</h1>
+{% set table = ((suggested + books)|unique(attribute='id')|list)[:6] %}
+<section class="table" data-table style="{{ ui.tone(table[0]) }}" aria-label="On the front table">
+  <div class="wrap table__stage">
+    {% for b in table %}
+    <div class="table__panel" id="table-{{ b.id }}" role="tabpanel" aria-label="{{ b.title }}" data-panel data-tone="{{ ui.tone(b) }}" {% if not loop.first %}hidden{% endif %}>
+      <div class="table__copy"><h2>{{ b.title }}</h2><p class="table__by">{{ b.author }}</p><p class="table__desc">{{ b.description }}</p>
+        <div class="table__act"><span class="table__price">{{ b.price_cents|money }}</span>{{ ui.add_button(b,'btn btn--band') }}<a class="table__more" href="{{ url_for('book_details',book_id=b.id) }}">See the book</a></div></div>
+      <a class="book3d" href="{{ url_for('book_details',book_id=b.id) }}" data-tilt data-morph tabindex="-1" aria-hidden="true"><span class="book3d__in"><span class="book3d__pages"></span>{{ ui.cover(b) }}</span></a>
+    </div>{% endfor %}
+  </div>
+  <div class="table__shelf"><div class="wrap table__tabs" role="tablist" aria-label="Choose a book">
+    {% for b in table %}<button role="tab" type="button" data-tab aria-controls="table-{{ b.id }}" aria-selected="{{ 'true' if loop.first else 'false' }}" {% if not loop.first %}tabindex="-1"{% endif %} aria-label="{{ b.title }}">{{ ui.cover(b) }}</button>{% endfor %}
+  </div></div>
+</section>
+<section class="wrap block"><h2>{% if current_user and current_user.role!='SU' %}Picked for you{% else %}Good places to start{% endif %}</h2>
+  <div class="picks">{% for b in suggested %}<article class="pick" style="{{ ui.tone(b) }}"><a class="pick__cover" href="{{ url_for('book_details',book_id=b.id) }}" data-morph tabindex="-1" aria-hidden="true">{{ ui.cover(b) }}</a><div><h3><a href="{{ url_for('book_details',book_id=b.id) }}" data-morph>{{ b.title }}</a></h3><p class="muted">{{ b.author }}</p><p>{{ b.description }}</p><p class="pick__price">{{ b.price_cents|money }}</p></div></article>{% endfor %}</div>
+</section>
+{% if not current_user or current_user.role=='RC' %}
+<section class="wrap"><div class="vip"><p><strong>VIP members save 10% on every order.</strong> You join automatically after your fourth order, or once you have spent more than $200.</p>{% if current_user %}<a class="btn btn--buy" href="{{ url_for('account') }}">See your progress</a>{% else %}<a class="btn btn--buy" href="{{ url_for('login') }}">Sign in</a>{% endif %}</div></section>
+{% endif %}
+{% endif %}
+<section class="wrap block shop" id="shop">
+  <aside class="filters" aria-label="Filter books">
+    <div><h2 class="filters__h">Category</h2>
+    <ul class="filters__list"><li><a href="{{ url_for('index',q=q or none) }}#shop" {% if not genre %}aria-current="true"{% endif %}>All categories</a></li>
+    {% for n in genres %}<li><a href="{{ url_for('index',genre=n,q=q or none) }}#shop" {% if n==genre %}aria-current="true"{% endif %}>{{ n }}</a></li>{% endfor %}</ul></div>
+    {% if books %}{% set prices = books|map(attribute='price_cents')|list %}
+    <div data-js hidden><h2 class="filters__h"><label for="max-price">Price</label></h2>
+    <input id="max-price" type="range" min="{{ prices|min }}" max="{{ prices|max }}" value="{{ prices|max }}" step="1" data-filter-price {% if prices|min == prices|max %}disabled{% endif %}><p class="filters__out">Up to <output data-price-out>{{ prices|max|money }}</output></p></div>
+    <div data-js hidden><h2 class="filters__h">Availability</h2><label class="check"><input type="checkbox" data-filter-stock> Ready to order</label></div>{% endif %}
+  </aside>
+  <div class="shop__main">
+    <div class="shop__bar"><div>{% if searching %}<h1 class="shop__h">{% if q %}Results for “{{ q }}”{% if genre %} in {{ genre }}{% endif %}{% else %}{{ genre }}{% endif %}</h1>{% else %}<h2 class="shop__h">All books</h2>{% endif %}<p class="muted" data-count aria-live="polite">{{ books|length }} {{ 'book' if books|length==1 else 'books' }}</p></div>
+    {% if books %}<label class="sort" data-js hidden>Sort by <select data-sort><option value="title">Title, A to Z</option><option value="price">Price, low to high</option><option value="price-desc">Price, high to low</option><option value="rating-desc">Highest rated</option><option value="sold-desc">Best selling</option></select></label>{% endif %}</div>
+    <div class="grid" data-grid>{% for b in books %}{{ ui.card(b) }}{% endfor %}</div>
+    <div class="empty" data-empty {% if books %}hidden{% endif %}><h3>{% if books %}No books match these filters{% else %}No books found{% endif %}</h3><p>{% if books %}Raise the price limit or include books that are out of stock.{% else %}Check the spelling, or try an author’s last name.{% endif %}</p><a class="btn btn--line" href="{{ url_for('index') }}#shop">Show all books</a></div>
+  </div>
+</section>
 {% endblock %}

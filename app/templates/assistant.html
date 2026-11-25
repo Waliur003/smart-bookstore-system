@@ -1,5 +1,7 @@
-{% extends 'base.html' %}{% block title %}AI Assistant{% endblock %}{% block content %}<h1>Local AI Assistant</h1>
-<p>Answers come from authorized store records when available. Otherwise the model identifies its answer as general knowledge.</p>
-<form class="stack" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><label>Your question<textarea name="question" rows="4" maxlength="1000" required>{{ question }}</textarea></label><button>Ask assistant</button></form>
-{% if response %}<article class="panel"><h2>Answer</h2><p class="preserve">{{ response.text }}</p><p class="muted">Source: {{ response.source }}</p></article>{% endif %}
-{% endblock %}
+{% extends 'base.html' %}{% import '_macros.html' as ui with context %}{% block title %}Ask a bookseller{% endblock %}
+{% block content %}<div class="wrap page ask"><h1>Ask a bookseller</h1><p class="lede">Our AI assistant checks the store’s own records first. If it answers from general knowledge instead, it says so.</p>
+<div class="chat" data-chat aria-live="polite">
+{% if question %}<div class="msg msg--you"><p class="preserve">{{ question }}</p></div>{% endif %}
+{% if response %}<div class="msg msg--it{% if response.source=='service error' %} msg--err{% endif %}" data-answer><p class="preserve">{{ response.text }}</p>{% if response.source not in ['service error','validation'] %}<p class="msg__src">Source: {{ response.source }}</p>{% endif %}</div>{% endif %}</div>
+<div class="chips" data-js hidden>{% for s in ['Which mystery books are available?','How does VIP work?','Recommend a science fiction book','What is my balance?'] %}<button type="button" data-chip>{{ s }}</button>{% endfor %}</div>
+<form class="composer" method="post" data-ask><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><textarea name="question" rows="2" maxlength="1000" required aria-label="Your question" placeholder="Ask about books, prices, orders or VIP"></textarea><button class="composer__go" aria-label="Send question">{{ ui.icon('send') }}</button></form></div>{% endblock %}

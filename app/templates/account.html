@@ -1,6 +1,13 @@
-{% extends 'base.html' %}{% block title %}Account{% endblock %}{% block content %}<h1>My Account</h1>
-<div class="panel"><p><strong>{{ current_user.name }}</strong> · {{ current_user.role }} · {{ current_user.status }}</p>
-<h2>Balance: {{ current_user.balance_cents|money }}</h2><p>Moderation offenses: {{ current_user.offense_count }}</p></div>
-<h2>Purchase history</h2>{% for o in orders|reverse %}<article class="line"><div><strong>Order {{ o.id }}</strong><p>{{ o.created_at[:10] }} · {{ o.lines|length }} item line(s)</p>
-{% if o.promoted_to_vip %}<p>🎉 Promoted to VIP on this purchase</p>{% endif %}</div><div>Total: {{ o.total_cents|money }}{% if o.fine_cents %}<p>Fine: {{ o.fine_cents|money }}</p>{% endif %}</div></article>
-{% else %}<p>No orders yet.</p>{% endfor %}{% endblock %}
+{% extends 'base.html' %}{% import '_macros.html' as ui with context %}{% block title %}Your account{% endblock %}
+{% block content %}{% set spent = orders|sum(attribute='total_cents') %}{% set n = orders|length %}
+<div class="wrap page"><h1>{{ current_user.name }}</h1><p class="lede">{{ {'RC':'Customer','VC':'VIP customer','SU':'Store staff'}[current_user.role] }}{% if current_user.status!='active' %}, suspended{% endif %}</p>
+{% if current_user.role!='SU' %}
+<section class="wallet"><div class="wallet__bal"><p>Balance</p><p class="wallet__n">{{ current_user.balance_cents|money }}</p>{% if current_user.offense_count %}<p>{{ current_user.offense_count }} moderation warning{{ '' if current_user.offense_count==1 else 's' }} on your reviews</p>{% endif %}</div>
+<div class="wallet__vip">{% if current_user.role=='VC' %}<h2>You are a VIP</h2><p>10% comes off every order at checkout.</p>{% else %}<h2>Your way to VIP</h2><p>Reach either one and 10% comes off every later order.</p>
+<label class="prog"><span>{{ n }} of 4 orders</span><progress max="4" value="{{ [n,4]|min }}"></progress></label>
+<label class="prog"><span>{{ spent|money }} spent (more than $200.00 needed)</span><progress max="20001" value="{{ [spent,20001]|min }}"></progress></label>{% endif %}</div></section>
+<section class="block"><h2>Orders</h2>{% for o in orders|reverse %}<details class="order" {% if loop.first %}open{% endif %}><summary><span><strong>{{ o.created_at[:10] }}</strong><span class="muted">Order {{ o.id }}</span></span><span class="order__t">{{ o.total_cents|money }}</span>{{ ui.icon('down') }}</summary>
+<div class="order__in">{% for l in o.lines %}{% set b = g.db['books']|selectattr('id','equalto',l.book_id)|first %}{% if b %}<a class="order__line" href="{{ url_for('book_details',book_id=b.id) }}">{{ ui.cover(b) }}<span><strong>{{ b.title }}</strong><span class="muted">{{ l.quantity }} at {{ l.unit_price_cents|money }}</span></span></a>{% endif %}{% endfor %}
+{% if o.fine_cents %}<p class="warn">A {{ o.fine_cents|money }} fine was charged because this order went over your balance.</p>{% endif %}{% if o.promoted_to_vip %}<p><span class="tag">This order made you a VIP</span></p>{% endif %}</div></details>
+{% else %}<div class="empty"><h3>No orders yet</h3><p>Your orders will be listed here after you check out.</p><a class="btn btn--line" href="{{ url_for('index') }}">Browse books</a></div>{% endfor %}</section>
+{% else %}<p><a class="btn" href="{{ url_for('admin') }}">Open the staff dashboard</a></p>{% endif %}</div>{% endblock %}
