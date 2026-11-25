@@ -1,13 +1,37 @@
-{% extends 'base.html' %}{% block title %}{{ book.title }}{% endblock %}{% block content %}
-<a href="{{ url_for('index') }}">← Back to catalog</a><div class="split"><section><div class="cover large">{{ book.genre }}</div></section><section>
-<h1>{{ book.title }}</h1><p class="muted">By {{ book.author }} · {{ book.genre }}</p><p>{{ book.description }}</p>
-<h2>{{ book.price_cents|money }}</h2><p>Available stock: {{ book.stock }} · Rating: {{ book.rating }} · Flag: {{ book.order_flag }}</p>
-{% if book.stock>0 and book.order_flag!='no-order' %}<form method="post" action="{{ url_for('add_cart',book_id=book.id) }}">
-<input type="hidden" name="_csrf" value="{{ csrf_token() }}"><label>Quantity<input type="number" name="quantity" min="1" max="50" value="1"></label><button>Add to cart</button></form>{% else %}<p class="alert error">This book cannot currently be ordered.</p>{% endif %}
-</section></div><hr><h2>Customer Reviews</h2>
-{% for r in reviews %}<article class="review"><strong>{% if r.stars %}{{ r.stars }}/5 stars{% else %}Comment{% endif %}</strong><p>{{ r.comment }}</p><small>{{ r.created_at[:10] }}</small></article>{% else %}<p>No reviews yet.</p>{% endfor %}
-{% if current_user and current_user.role in ['RC','VC'] and current_user.status=='active' %}<h3>Write a review</h3>
-<form class="stack" method="post" action="{{ url_for('review',book_id=book.id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-<label>Rating<select name="stars"><option value="">No rating</option>{% for i in range(1,6) %}<option value="{{ i }}">{{ i }} stars</option>{% endfor %}</select></label>
-<label>Comment<textarea name="comment" maxlength="1500" rows="4"></textarea></label><button>Submit review</button></form>{% endif %}
-{% endblock %}
+{% extends 'base.html' %}{% import '_macros.html' as ui with context %}{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+{% set rated = reviews|selectattr('stars')|list %}
+<div class="wrap">
+<nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url_for('index') }}">All books</a><a href="{{ url_for('index',genre=book.genre) }}">{{ book.genre }}</a><span aria-current="page">{{ book.title }}</span></nav>
+<section class="detail" style="{{ ui.tone(book) }}">
+  <div class="detail__stage"><span class="book3d" data-tilt><span class="book3d__in"><span class="book3d__pages"></span>{{ ui.cover(book,'is-morph') }}</span></span></div>
+  <div class="detail__info"><h1>{{ book.title }}</h1>
+    <p class="detail__by">by <a href="{{ url_for('index',q=book.author) }}">{{ book.author }}</a></p>
+    <p class="detail__rate"><a href="#reviews">{{ ui.stars(book.rating, rated|length) }}</a>{% if book.order_flag=='to-order' %}<span class="tag">Highly rated by readers</span>{% endif %}</p>
+    <p class="detail__desc">{{ book.description }}</p>
+    <div class="buy">
+      <p class="buy__price">{{ book.price_cents|money }}</p>
+      {% if current_user and current_user.role=='VC' %}<p class="buy__vip">10% comes off at checkout with your VIP discount.</p>{% endif %}
+      <p>{{ ui.stock(book) }}</p>
+      {% if ui.can_order(book) %}<form class="buy__form" method="post" action="{{ url_for('add_cart',book_id=book.id) }}" data-add><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="step" data-step><button type="button" data-step-by="-1" aria-label="One fewer">−</button><input type="number" name="quantity" min="1" max="{{ [book.stock,50]|min }}" value="1" aria-label="Quantity"><button type="button" data-step-by="1" aria-label="One more">+</button></div>
+        <button class="btn btn--buy btn--big">Add to cart</button></form>{% endif %}
+      <p class="muted buy__note">This is a class project. Orders are simulated and nothing ships.</p>
+    </div>
+    <p><a href="{{ url_for('assistant') }}">Ask a bookseller about this book</a></p>
+  </div>
+</section>
+<section class="block reviews" id="reviews"><div class="reviews__side"><h2>Reader reviews</h2>
+  {% if rated %}<p class="reviews__big">{{ book.rating }} <span>out of 5</span></p>
+  <div class="bars">{% for n in [5,4,3,2,1] %}{% set c = rated|selectattr('stars','equalto',n)|list|length %}<div class="bars__row"><span>{{ n }} star{{ '' if n==1 else 's' }}</span><span class="bars__track"><span style="width:{{ (100*c/(rated|length))|round }}%"></span></span><span>{{ c }}</span></div>{% endfor %}</div><p class="muted">Ratings from people who bought the book count double.</p>
+  {% else %}<p class="muted">Nobody has rated this book yet.</p>{% endif %}</div>
+  <div>{% for r in reviews|reverse %}<article class="review">{% if r.stars %}<p>{{ ui.stars(r.stars) }}</p>{% endif %}{% if r.comment %}<p class="review__text">{{ r.comment }}</p>{% endif %}<p class="muted">{{ r.created_at[:10] }}</p></article>{% endfor %}
+  {% if current_user and current_user.role in ['RC','VC'] and current_user.status=='active' %}
+  <form class="write" method="post" action="{{ url_for('review',book_id=book.id) }}"><h3>Write a review</h3><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <fieldset class="rate"><legend>Your rating (optional)</legend><div class="rate__row">{% for i in [5,4,3,2,1] %}<input class="sr" type="radio" name="stars" id="s{{ i }}" value="{{ i }}"><label for="s{{ i }}"><span class="sr">{{ i }} star{{ '' if i==1 else 's' }}</span></label>{% endfor %}</div></fieldset>
+    <label class="field">What did you think?<textarea name="comment" maxlength="1500" rows="4"></textarea></label><button class="btn">Post review</button></form>
+  {% elif not current_user %}<p class="write"><a href="{{ url_for('login') }}">Sign in</a> to write a review.</p>{% endif %}</div>
+</section>
+{% set more = g.db['books']|rejectattr('id','equalto',book.id)|list %}{% set same = more|selectattr('genre','equalto',book.genre)|list %}
+{% if more %}<section class="block"><h2>You might also like</h2><div class="grid grid--row">{% for b in ((same + more)|unique(attribute='id')|list)[:4] %}{{ ui.card(b) }}{% endfor %}</div></section>{% endif %}
+</div>{% endblock %}

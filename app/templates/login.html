@@ -1,10 +1,12 @@
-{% extends 'base.html' %}{% block title %}Login{% endblock %}{% block content %}
-<h1>Account Login</h1><p>Choose an enrolled biometric method. Failed or unavailable recognition does not grant access.</p>
-<div class="split"><section class="panel"><h2>Biometric login</h2><form class="stack" method="post" action="{{ url_for('login') }}" enctype="multipart/form-data">
-<input type="hidden" name="_csrf" value="{{ csrf_token() }}"><label>Method<select name="method"><option value="face">Face recognition</option><option value="voice">Voice recognition</option></select></label>
-<label>Live sample (face image or voice clip)<input type="file" name="sample" accept="image/*,audio/*" required></label><button>Authenticate</button></form>
-<p class="muted">For face: take a current photo. For voice: upload a short audio file recorded now. Voice matching expects a browser-recorded format supported by ffmpeg.</p></section>
-{% if demo %}<section class="panel"><h2>Local development demo</h2><p class="muted">Development-only account selection. Enabled only with DEMO_MODE=1 from localhost. This is not biometric authentication.</p>
+{% extends 'base.html' %}{% import '_macros.html' as ui with context %}{% block title %}Sign in{% endblock %}
+{% block content %}<div class="wrap page signin"><h1>Sign in</h1>
+<div class="signin__grid"><section><h2>With your face or voice</h2>
+<form class="stack" method="post" action="{{ url_for('login') }}" enctype="multipart/form-data"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <fieldset class="seg"><legend class="sr">How to sign in</legend><input class="sr" type="radio" id="m-face" name="method" value="face" checked data-method><label for="m-face">{{ ui.icon('user') }} Face</label><input class="sr" type="radio" id="m-voice" name="method" value="voice" data-method><label for="m-voice">{{ ui.icon('mic') }} Voice</label></fieldset>
+  <label class="drop" data-drop><input type="file" name="sample" accept="image/*,audio/*" required>{{ ui.icon('upload') }}<strong data-drop-title>Choose a face photo or voice clip</strong><span class="muted" data-drop-hint>Use one recorded just now.</span><img alt="" data-drop-preview hidden></label>
+  <button class="btn btn--big">Sign in</button></form>
+<p class="muted">Your sample is compared with your enrolled one and then discarded.</p></section>
+{% if demo %}<section><h2>With a demo account</h2><p class="muted">For local development only. This skips the face and voice check.</p>
 <form class="stack" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="method" value="demo">
-<label>Demo account<select name="account_id">{% for a in accounts %}<option value="{{ a.id }}">{{ a.name }} ({{ a.role }})</option>{% endfor %}</select></label><button>Enter demo</button></form></section>{% endif %}</div>
-{% endblock %}
+  <fieldset class="people"><legend class="sr">Demo account</legend>{% for a in accounts %}<input class="sr" type="radio" name="account_id" id="a-{{ a.id }}" value="{{ a.id }}" {% if loop.first %}checked{% endif %}><label class="person" for="a-{{ a.id }}"><span class="person__i" aria-hidden="true">{{ a.name[0] }}</span><span><strong>{{ a.name }}</strong><span class="muted">{{ {'RC':'Customer','VC':'VIP customer','SU':'Store staff'}[a.role] }}{% if a.status!='active' %}, suspended{% endif %}</span></span></label>{% endfor %}</fieldset>
+  <button class="btn btn--buy btn--big">Sign in to demo</button></form></section>{% endif %}</div></div>{% endblock %}

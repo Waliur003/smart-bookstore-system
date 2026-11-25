@@ -1,8 +1,21 @@
-{% extends 'base.html' %}{% block title %}Cart{% endblock %}{% block content %}<h1>Your Cart</h1>
-{% for line in lines %}<div class="line"><div><strong>{{ line.book.title }}</strong><p>{{ line.quantity }} × {{ line.book.price_cents|money }} = {{ line.line_total|money }}</p></div>
-<form method="post" action="{{ url_for('remove_cart',book_id=line.book.id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="secondary">Remove</button></form></div>{% else %}<p>Your cart is empty.</p>{% endfor %}
-{% if lines %}<div class="panel"><p>Subtotal: {{ subtotal|money }}</p>{% if current_user and current_user.role=='VC' %}<p>VIP discount: 10%</p>{% endif %}
-<h2>Order total: {{ total|money }}</h2><p class="muted">Overspending completes the order, adds a $1 fine, and suspends the account when the balance becomes negative.</p>
-{% if current_user and current_user.role in ['RC','VC'] and current_user.status=='active' %}<form method="post" action="{{ url_for('checkout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button>Confirm simulated purchase</button></form>
-{% else %}<p>Sign in with an active customer account to purchase.</p><a class="btn" href="{{ url_for('login') }}">Go to login</a>{% endif %}</div>{% endif %}
-{% endblock %}
+{% extends 'base.html' %}{% import '_macros.html' as ui with context %}{% block title %}Cart{% endblock %}
+{% block content %}<div class="wrap page" id="cart-root"><h1>Your cart</h1>
+{% if lines %}<div class="cart"><div class="cart__lines" data-cart-lines>
+{% for line in lines %}<article class="line"><a class="line__cover" href="{{ url_for('book_details',book_id=line.book.id) }}" tabindex="-1" aria-hidden="true">{{ ui.cover(line.book) }}</a>
+  <div class="line__body"><h2><a href="{{ url_for('book_details',book_id=line.book.id) }}">{{ line.book.title }}</a></h2><p class="muted">{{ line.book.author }}</p>
+  {% if line.quantity>line.book.stock %}<p class="stock stock--out">Only {{ line.book.stock }} in stock. Lower the quantity to check out.</p>{% endif %}
+  <div class="line__act"><div class="step step--s" data-cart-step data-js hidden data-qty="{{ line.quantity }}" data-add-url="{{ url_for('add_cart',book_id=line.book.id) }}" data-remove-url="{{ url_for('remove_cart',book_id=line.book.id) }}"><button type="button" data-cart-by="-1" aria-label="One fewer {{ line.book.title }}" {% if line.quantity<2 %}disabled{% endif %}>−</button><span>{{ line.quantity }}</span><button type="button" data-cart-by="1" aria-label="One more {{ line.book.title }}" {% if line.quantity>=[line.book.stock,50]|min %}disabled{% endif %}>+</button></div><noscript>Quantity {{ line.quantity }}</noscript>
+  <form method="post" action="{{ url_for('remove_cart',book_id=line.book.id) }}" data-remove><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="textbtn" aria-label="Remove {{ line.book.title }}">Remove</button></form></div></div>
+  <p class="line__total">{{ line.line_total|money }}{% if line.quantity>1 %}<span>{{ line.book.price_cents|money }} each</span>{% endif %}</p></article>{% endfor %}
+<p class="cart__sub"><span>Subtotal</span><strong>{{ subtotal|money }}</strong></p></div>
+<aside class="sum"><h2>Order summary</h2>
+  <dl><div><dt>Subtotal</dt><dd>{{ subtotal|money }}</dd></div>{% if subtotal!=total %}<div class="sum__save"><dt>VIP discount, 10%</dt><dd>−{{ (subtotal-total)|money }}</dd></div>{% endif %}<div class="sum__total"><dt>Total</dt><dd>{{ total|money }}</dd></div></dl>
+  {% if current_user and current_user.role in ['RC','VC'] and current_user.status=='active' %}
+    {% set left = current_user.balance_cents-total %}
+    {% if left<0 %}<p class="warn">Your balance is {{ current_user.balance_cents|money }}, which does not cover this order. If you place it, a $1.00 fine is added and your account is suspended.</p>{% else %}<p class="muted">Paid from your balance. You will have {{ left|money }} left.</p>{% endif %}
+    <form method="post" action="{{ url_for('checkout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn btn--buy btn--big btn--wide">Place order</button></form><p class="muted">Simulated purchase. No real payment is taken.</p>
+  {% elif current_user and current_user.role=='SU' %}<p class="muted">Staff accounts cannot place orders.</p>
+  {% elif current_user %}<p class="warn">Your account is suspended, so you cannot place orders.</p>
+  {% else %}<p class="muted">Sign in with a customer account to place this order.</p><a class="btn btn--buy btn--big btn--wide" href="{{ url_for('login') }}">Sign in</a>{% endif %}</aside></div>
+{% else %}<div class="empty" data-cart-lines><h3>Your cart is empty</h3><p>Books you add will show up here.</p><a class="btn btn--line" href="{{ url_for('index') }}">Browse books</a></div>{% endif %}
+</div>{% endblock %}

@@ -1,0 +1,81 @@
+{# Shared pieces: icons, covers, ratings, product cards. #}
+{% set art = {
+  'Pride and Prejudice': {'file':'pride-and-prejudice','band':'#7A1E3A','ink':'#FFE6E2','bg':'#F3C9C6','title':'#7A1E3A','place':'top'},
+  'Frankenstein': {'file':'frankenstein','bg':'#17231F','band':'#D3DE62','ink':'#17231F','title':'#D3DE62','place':'top'},
+  'The Time Machine': {'file':'the-time-machine','band':'#FFDDB0','ink':'#4A1426','bg':'#F7A650','title':'#5B1A2E','place':'top'},
+  'The Adventures of Sherlock Holmes': {'file':'the-adventures-of-sherlock-holmes','band':'#F2C14E','ink':'#1B2831','bg':'#2F4350','title':'#F2C14E','place':'top'},
+  'Jane Eyre': {'file':'jane-eyre','band':'#CBD8EC','ink':'#14264A','bg':'#101C30','title':'#F3EAD0','place':'bottom'},
+  'The Wonderful Wizard of Oz': {'file':'the-wonderful-wizard-of-oz','band':'#BFE8CF','ink':'#0A4A35','bg':'#0F6B4B','title':'#FFD23F','place':'top'}
+} %}
+{# Used for books staff add that have no artwork of their own. #}
+{% set spare = [
+  {'band':'#D9E4F2','ink':'#1D3557','title':'#1D3557','place':'top'},
+  {'band':'#F2D8B8','ink':'#5A2A0C','title':'#5A2A0C','place':'bottom'},
+  {'band':'#CFE3D4','ink':'#12402B','title':'#12402B','place':'top'},
+  {'band':'#E2D6EA','ink':'#3E2152','title':'#3E2152','place':'bottom'},
+  {'band':'#F4C7B5','ink':'#6A1B14','title':'#6A1B14','place':'top'}
+] %}
+
+{% macro tone(book) -%}
+{%- set a = art.get(book.title) or spare[book.title|length % 5] -%}
+--band:{{ a.band }};--band-ink:{{ a.ink }}
+{%- endmacro %}
+
+{% macro art_url(book) -%}
+{%- if book.cover_url -%}{{ book.cover_url }}{%- elif art.get(book.title) -%}{{ url_for('static',filename='img/covers/'~art[book.title].file~'.svg') }}{%- endif -%}
+{%- endmacro %}
+
+{% macro cover(book, cls='') -%}
+{%- set a = art.get(book.title) or spare[book.title|length % 5] -%}
+{%- if book.cover_url -%}
+<span class="cover {{ cls }}"><img src="{{ book.cover_url }}" alt="Cover of {{ book.title }}"></span>
+{%- else -%}
+<span class="cover cover--{{ a.place }}{% if not a.file %} cover--plain{% endif %} {{ cls }}" role="img" aria-label="Cover of {{ book.title }} by {{ book.author }}" style="--cover-bg:{{ a.bg or a.band }};--cover-ink:{{ a.title }}">
+{%- if a.file %}<img src="{{ url_for('static',filename='img/covers/'~a.file~'.svg') }}" alt="">{% endif -%}
+<span class="cover__text{% if book.title|length > 22 or book.title.split()|map('length')|max > 9 %} cover__text--long{% endif %}" aria-hidden="true"><span class="cover__title">{{ book.title }}</span><span class="cover__author">{{ book.author }}</span></span></span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name=='search' %}<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>
+{%- elif name=='cart' %}<path d="M5 8h14l1 12H4L5 8z"/><path d="M8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5"/>
+{%- elif name=='user' %}<circle cx="12" cy="8" r="4"/><path d="M4 21c.6-4.4 3.8-6.5 8-6.5s7.4 2.1 8 6.5"/>
+{%- elif name=='mic' %}<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>
+{%- elif name=='close' %}<path d="M6 6l12 12M18 6L6 18"/>
+{%- elif name=='send' %}<path d="M12 19V5M6 11l6-6 6 6"/>
+{%- elif name=='down' %}<path d="M6 9.5l6 6 6-6"/>
+{%- elif name=='upload' %}<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v5h16v-5"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+{% macro stars(value, count=none) -%}
+{%- if value -%}
+<span class="stars" role="img" aria-label="Rated {{ value }} out of 5"><span class="stars__fill" style="width:{{ value*20 }}%"></span></span><span class="stars__num">{{ value }}{% if count is not none %} ({{ count }}){% endif %}</span>
+{%- else -%}<span class="stars__none">No ratings yet</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro can_order(book) -%}{%- if book.stock > 0 and book.order_flag != 'no-order' -%}1{%- endif -%}{%- endmacro %}
+
+{% macro stock(book) -%}
+{%- if book.order_flag=='no-order' -%}<span class="stock stock--out">Not available to order</span>
+{%- elif book.stock < 1 -%}<span class="stock stock--out">Out of stock</span>
+{%- elif book.stock <= 5 -%}<span class="stock stock--low">Only {{ book.stock }} left</span>
+{%- else -%}<span class="stock">In stock</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro add_button(book, cls='btn') -%}
+{%- if can_order(book) -%}
+<form method="post" action="{{ url_for('add_cart',book_id=book.id) }}" data-add><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="quantity" value="1"><button class="{{ cls }}" aria-label="Add {{ book.title }} to cart">Add to cart</button></form>
+{%- else -%}<span class="stock stock--out">Not available to order</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro card(book) -%}
+<article class="card" data-card data-id="{{ book.id }}" data-title="{{ book.title|lower }}" data-price="{{ book.price_cents }}" data-rating="{{ book.rating }}" data-sold="{{ book.sold }}" data-available="{{ can_order(book) }}">
+<a class="card__cover" href="{{ url_for('book_details',book_id=book.id) }}" data-morph tabindex="-1" aria-hidden="true">{{ cover(book) }}</a>
+<div class="card__body"><h3 class="card__title"><a href="{{ url_for('book_details',book_id=book.id) }}" data-morph>{{ book.title }}</a></h3>
+<p class="card__author">{{ book.author }}</p>
+<p class="card__rating">{{ stars(book.rating) }}</p>
+<p class="card__price"><strong>{{ book.price_cents|money }}</strong> {{ stock(book) }}</p>
+{% if can_order(book) %}{{ add_button(book,'btn btn--line btn--wide') }}{% endif %}</div></article>
+{%- endmacro %}
